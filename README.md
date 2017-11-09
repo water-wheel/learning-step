@@ -347,3 +347,152 @@
 		- using ejs template syntax
 
 
+### 第二讲
+- 整体架构分析
+- 模板工程的分类
+- generator-flash的执行流程
+- 暴露尽可能少量的配置文件
+- 扩展一般webpack配置的兼容性
+- 为模板工程添加语法糖
+- 数据mock功能的开发
+- 组件中关于readme的统一化
+- 黑科技
+
+
+#### 整体架构分析
+- 团队目的
+	- 解决复杂的且重复的问题，给团队带来效率提升
+	- 从团队leader的角度看：我们每个团队成员，应该尽快的去完成业务需求，而不是天天配置开发环境，如果有现成的代码可用，就不要重复造轮子，拿来即用就好。
+	- 我们的目的就是要那一堆零件过来，然后拼装成一辆汽车，而不需要了解零件的制作工艺
+- 剥离组件
+	- 组件剥离项目是非常重要的一个事情，它使得项目依赖清晰，开发更快捷
+	- 代码解耦、可复用性强、维护方便单一
+	- 组件最好维护到公司的npm私服上，没有npm私服的建议组件名 加个前缀，发到npm上
+- 减少开发者的学习成本
+	- 项目的配置项越少 对开发人员的上手成本就越低
+	- 把webpack的配置内敛至npm包中，仅留下几个路径配置项
+- 架构对比
+	- 传统架构设计
+	
+	<img src="http://oyoee89se.bkt.clouddn.com/%E4%BC%A0%E7%BB%9F%E6%9E%B6%E6%9E%84%E8%AE%BE%E8%AE%A1.png" width="600" />
+	
+	- 新架构设计
+	
+	<img src="http://oyoee89se.bkt.clouddn.com/%E6%96%B0%E6%9E%B6%E6%9E%84%E8%AE%BE%E8%AE%A1.png" width="600" />
+
+#### 模板工程的分类
+- 根据前端框架分类
+	- React
+	- Vue
+	- JQuery
+- 根据功能拆分
+	- project
+	- component
+	- common
+- 根据使用的主要功能插件分
+	- react + router
+	- react + router + redux
+	- react + mobx + typescript
+
+- 究其结果，都是要进行模板文件的copy，只不过 根据用户的选择不同，copy的内容不同罢了
+	<img src="http://oyoee89se.bkt.clouddn.com/A4C21ECA-C440-4BF7-9E24-96C85A8FA4E6.png" width="500" />
+
+
+- 下面先带大家过一遍 generator-flash 的执行流程，然后再从平时遇到的比较多的问题上开始看，一系列的影响效率的问题，然后去解决他们
+
+#### generator-flash的执行流程
+- 流程 (/app/index.js)
+	- 检测当前脚手架版本 (/_libs/logo.js)
+		- 打印欢迎语 
+	- 选择创建工程类型 (project、component)
+	- 选择技术栈
+	- 项目名、描述、作者名、作者邮箱、gitlab group、version
+	- react的项目 是否使用redux
+	- 是否自动安装依赖
+	- 根据用户选择 copy 模板工程 至 项目目录
+	- 安装依赖
+	- 打印结束语
+
+
+#### 暴露尽可能少量的配置文件出来
+- 问题：项目的webpack配置复杂，通常是有从入门到放弃一说的，可见它的复杂度之高，而暴露出来的配置项越多，开发者自己改动的可能性就越大，而脚手架就越不可控
+
+	<img src="http://oyoee89se.bkt.clouddn.com/FC73C83C-4C03-4927-B5E1-DFE8034E1EBC.png" width="500" />
+	
+- 解决：
+	- webpack通用配置 和 个性化配置分离
+	- 版本锁定、依赖内敛至npm
+		- 版本锁定：整个团队技术框架统一
+		- 依赖内敛：团队技术升级方便
+
+#### 扩展一般webpack配置的兼容性
+- webpack 具体配置不细讲了哈，推荐给大家看一个webpack的视频课程：https://m.qlchat.com/live/channel/channelPage/2000000172777118.htm
+- 问题：webpack在多页应用开发时候，会出现 entry 多入口路径的配置问题，相信很多前端同学，没有玩过webpack时候，或者对webpack一知半解时候，配置此多页面入口路径是相当麻烦的一件事儿
+
+	<img src="http://oyoee89se.bkt.clouddn.com/8510E9A8-467B-4FBB-B519-1C81A3B4523D.png" width="400" />
+
+- 我们自己的脚手架完全可以解决这个问题
+- 解决：
+	- 原理：按照定义的规范去写目录结构，在运行代码之前，先用node解析一遍，当前的路径，自动计算出当前的 entry map，完美解决
+	- 代码：https://github.com/water-wheel/flash-scripts/blob/master/config/paths.js#L26
+
+		<img src="http://oyoee89se.bkt.clouddn.com/3CCF5438-5270-4FA3-AD10-8947724E5C0C.png" width="500" />
+		
+#### 为模板工程添加语法糖
+- 问题：在团队中，有多个业务线，每个业务线也都有多个项目，每个项目都会用到的功能，都需要开发人员开发一遍，或者从其他项目中copy一份出来，导致了业务代码乱七八糟，而且代码质量参差不一
+- 解决：我们通过脚手架，为每个项目都内置一些工具方法，
+	- 例如一些工具函数：获取url的参数、判断当前容器类型、监听页面回退、获取cookie值等
+	
+		<img src="http://oyoee89se.bkt.clouddn.com/FEBD6976-6BAA-4FC8-B494-0EEE1B3769DA.png" width="500" />
+
+	- reset.css
+	- scss mixin：兼容性flex方案、1像素线边框、单行（多行）文本截断、渐变、rem计算函数等
+		
+		<img src="http://oyoee89se.bkt.clouddn.com/BC456FB8-FCCA-4424-AB73-09AA6C293612.png" width="500" />
+		
+- 当然如果你们团队是hybrid开发时候，里面还可以内置一些 jsBridge 进去
+- flash脚手架的语法糖代码：https://github.com/water-wheel/generator-flash/tree/master/common
+
+#### 数据mock功能的开发
+- 问题：前后端分离的项目，后端接口开发缓慢，前端业务依赖后端接口数据，如若是写一个常量的数据来mock，则上线前 需要更换接口的url，需要前端开发重新进行自测，才能交付
+- 解决：
+	- 启一个本地服务来作为接口服务器
+	- 建一个mock文件夹 来放置 mock的接口数据，和mock的config配置(type: get | post | delay 等)
+	- 监听mock文件夹，如果有modify，则重启mock服务来更新接口数据
+- 具体解决方案：
+	- 在npm start时候，我们fork一个进程，把mock server跑起来，然后监听mock文件夹，当mock文件夹发生修改时候，则重启这个进程
+		- 代码地址：https://github.com/water-wheel/flash-scripts/blob/master/scripts/mock.js
+		
+		<img src="http://oyoee89se.bkt.clouddn.com/DE09069D-40E3-4444-A047-9C841F0B9BD6.png" width="500" />
+	- mock接口服务 (读取本地mock文件的配置内容 和 配置列表，缓存起来，然后启动服务)
+		- 代码展示：https://github.com/water-wheel/flash-scripts/blob/master/mock/worker.js
+		
+		<img src="http://oyoee89se.bkt.clouddn.com/CA8B871C-A24C-43E5-B0E6-0F93117DF386.png" width="500" />
+	
+
+#### 组件中关于readme的统一化
+- 问题：即使有了脚手架 帮我们把组件的工程创建好，但我们还是经常遇到其他人开发的组件，我们无法快速使用的问题
+	- 例如我们知道有loading这个组件，但是props的入参是什么，我们只能通过代码找到，有好一点儿的，作者在readme里面 写了loading的使用方式，但是可能下个dialog的组件 就在readme里面 以另一种风格去写dialog的组件使用了，这是一件很蛋疼的事儿
+- 解决方案：
+	- 让readme风格 和 规范统一化
+	- 让使用者 在第一时间能找到 最简单的使用示例 和 配置参数，只需要copy过来就能用，不需要关心源码是怎么开发的，如果遇到问题，小窗下作者，立马能得到解决方法
+	- 我们readme的模板
+	
+	<img src="http://oyoee89se.bkt.clouddn.com/D4306A1C-0AF4-4FB2-BBE9-C4749C8AEC57.png" width="500" />
+	
+	- 示例：
+		- toast：https://github.com/water-wheel/toast
+		
+			<img src="http://oyoee89se.bkt.clouddn.com/417372B5-427E-4CDA-A1AD-7196FFC4FD9B.png" width="500" />
+			
+		- loading：https://github.com/water-wheel/loading
+
+			<img src="http://oyoee89se.bkt.clouddn.com/2DC84157-DA0E-46D8-8B56-06E9D4A91A6F.png" width="500" />
+			
+#### 黑科技
+- figlet 生成字符字 
+	- ```npm i figlet-cli -g```
+	- ```figlet OK FLASH```
+- tree 生成目录结构
+	- ```npm i tree-cli -g```
+	- ```tree```
